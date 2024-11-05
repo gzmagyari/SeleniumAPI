@@ -1,0 +1,7 @@
+flask>=2.0.0
+selenium>=4.0.0
+undetected-chromedriver>=3.0.0
+requests>=2.26.0
+requests-toolbelt>=0.10.0
+pyperclip>=1.8.2
+flask-restx>=1.1.0
