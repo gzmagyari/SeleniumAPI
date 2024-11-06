@@ -48,6 +48,9 @@ def find_elements(driver, css_selector, element_list=None):
         except NoSuchElementException:
             raise NoSuchElementException(f'No parent element found for the selector "{css_selector}"')
 
+    def check_element_visibility(element):
+        return element.is_displayed()
+
     if "::" not in css_selector:
         print("css_selector:"+css_selector)
         if element_list:
@@ -65,6 +68,8 @@ def find_elements(driver, css_selector, element_list=None):
             modifier = part[2:]
             if modifier == "parent":
                 element_list = [find_parent_element(element_list[0])]
+            elif modifier == "visible":
+                element_list = [e for e in element_list if check_element_visibility(e)]
             elif modifier.isdigit():
                 index = int(modifier)
                 if 0 <= index < len(element_list):
