@@ -28,6 +28,11 @@ def get_session(name, profile = ""):
     chrome_options.add_argument('--window-size=375x667')
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument('--no-first-run --no-service-autorun --password-store=basic --no-default-browser-check')
+    chrome_options.add_argument("--disable-background-timer-throttling")
+    chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+    chrome_options.add_argument("--disable-renderer-backgrounding")
+    chrome_options.add_argument("--disable-webgl")
+    chrome_options.add_argument("--disable-software-rasterizer")
 
     profile = profile.lower();
     if profile != "" and profile != "default":
@@ -35,8 +40,48 @@ def get_session(name, profile = ""):
         chrome_options.user_data_dir = profile_path
 
     driver = uc.Chrome(options=chrome_options)
+
     sessions[name] = driver
     return driver
+
+def prepare_js_environment(driver):
+    driver.execute_script("""
+        window.requestAnimationFrame = function(callback) {
+            setTimeout(callback, 16); // Call the callback at ~60 FPS
+        };
+    """)
+
+    driver.execute_script("""
+        window.test = "test";
+        Object.defineProperty(document, 'visibilityState', {
+            get: function() {
+                return 'visible';
+            }
+        });
+        Object.defineProperty(document, 'hidden', {
+            get: function() {
+                return false;
+            }
+        });
+        Object.defineProperty(document, 'webkitVisibilityState', {
+            get: function() {
+                return 'visible';
+            }
+        });
+    """)
+
+    driver.execute_script("""
+        function simulateMouseMove() {
+            var event = new MouseEvent('mousemove', {
+                bubbles: true,
+                cancelable: true,
+                clientX: 100,
+                clientY: 100
+            });
+            document.dispatchEvent(event);
+        }
+        setInterval(simulateMouseMove, 1000);
+    """)
 
 def find_elements(driver, css_selector, element_list=None):
     if element_list is None:
@@ -109,6 +154,8 @@ def execute():
             url = params.get('url')
             if url:
                 driver.get(url)
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body')))
+                prepare_js_environment(driver)
                 return jsonify({'status': 'success', 'message': f'Navigated to {url}'}), 200
             else:
                 return jsonify({'status': 'error', 'message': 'URL is missing'}), 400
